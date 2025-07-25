@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Hash Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Crypto-JS for MD5 support (will be used inside the worker) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0c0a18; /* Fallback */
+        }
+        .hash-output, .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Interactive Background */
+        #interactive-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #1e3a8a, #3b0764, #0c4a6e, #4c1d95);
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            z-index: -1;
+        }
+        #interactive-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle 400px at var(--x, 50%) var(--y, 50%), rgba(192, 132, 252, 0.2), transparent 80%);
+            transition: background 0.1s linear;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Enhanced Glassmorphism */
+        .glass-edge {
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+        .input-glass {
+             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        /* Tab styling */
+        .tab-btn {
+            transition: color 0.3s ease;
+        }
+        .tab-btn.active {
+            color: #3b82f6; /* blue-500 */
+        }
+        #tab-slider {
+            background-color: #3b82f6; /* blue-500 */
+        }
+        /* Custom scrollbar */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* Progress bar styling */
+        .progress-bar {
+            width: 0%;
+            transition: width 0.2s linear;
+            background-color: #3b82f6; /* blue-500 */
+        }
+        
+        /* Button hover effect */
+        .btn-lift {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .btn-lift:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .btn-lift:active:not(:disabled) {
+            transform: translateY(0px);
+            box-shadow: none;
+        }
+
+        /* Tab content fade-in */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-content.active-tab {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        /* File list item animation */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .file-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        .file-item.removing {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(20px); }
+        }
+        
+        /* Icon Animations */
+        @keyframes jiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        .jiggle { animation: jiggle 0.3s ease-in-out; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .pulse { animation: pulse 0.5s ease-in-out; }
+    </style>
+</head>
+<body class="text-gray-100">
+    <div id="interactive-bg"></div>
+    <div class="main-container w-full max-w-5xl mx-auto bg-gray-900/40 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden glass-edge">
+        <div class="p-4 sm:p-6 md:p-8 relative">
+
+            <div class="text-center mb-6">
+                <h1 class="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500" style="text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Advanced Hash Toolkit</h1>
+                <p class="text-gray-300 mt-2">A versatile crypto utility for hashing, encoding, and more.</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="relative mb-6 w-full overflow-hidden">
+                <div class="overflow-x-auto hide-scrollbar">
+                    <div id="tab-container" class="relative flex items-center gap-4 sm:gap-6 md:gap-8 w-max mx-auto px-4">
+                        <button data-tab="file" class="tab-btn py-2 font-semibold flex items-center gap-2 whitespace-nowrap" title="Calculate hashes for local files"><svg id="file-icon" class="w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>File Hash</button>
+                        <button data-tab="text" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Calculate hash from text input"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.091 1.21-.138 2.43-.138 3.662v4.288a1.125 1.125 0 001.125 1.125h12.75a1.125 1.125 0 001.125-1.125v-4.288z" /></svg>Text Hash</button>
+                        <button data-tab="compare" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Compare two hashes for equality"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l-6.75-6.75M12 19.5l6.75-6.75" /></svg>Compare</button>
+                        <button data-tab="hmac" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Generate a keyed-hash message authentication code"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>HMAC</button>
+                        <button data-tab="base64" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Encode or decode Base64 strings"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Base64</button>
+                        <button data-tab="checksum" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Verify files against a checksum file"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Checksum</button>
+                        <button data-tab="password" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Check the strength of a password"><svg id="password-icon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>Password</button>
+                        <button data-tab="url" class="tab-btn py-2 font-semibold text-gray-300 flex items-center gap-2 whitespace-nowrap" title="Encode or decode URL components"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>URL Encode</button>
+                        <div id="tab-slider" class="absolute bottom-0 h-0.5 rounded-full transition-all duration-300"></div>
+                    </div>
+                </div>
+            </div>
+            <p id="tab-description" class="text-center text-sm text-gray-400 mb-6 h-5"></p>
+
+
+            <!-- Algorithm Selection (Shared on applicable tabs) -->
+            <div id="algo-select-container" class="mb-6 max-w-md mx-auto">
+                <label for="algo-select" class="block text-sm font-semibold text-gray-300 mb-2 text-center">Choose Algorithm</label>
+                <select id="algo-select" class="w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-white input-glass">
+                    <option value="SHA-256">SHA-256 (Recommended)</option>
+                    <option value="SHA-512">SHA-512</option>
+                    <option value="SHA-384">SHA-384</option>
+                    <option value="SHA-1">SHA-1 (Legacy)</option>
+                    <option value="MD5">MD5 (Checksum)</option>
+                </select>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="file-tab" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- File Input & Generation -->
+                    <div class="space-y-4">
+                         <label class="block text-sm font-semibold text-gray-300">1. Select or Drop Files (Max 10)</label>
+                        <div id="drop-zone" class="drop-zone relative w-full min-h-[8rem] rounded-lg flex flex-col justify-center items-center text-center p-4 bg-gray-800/60 input-glass">
+                            <div id="drop-zone-content" class="flex flex-col items-center justify-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <p class="text-gray-400 text-sm">Drag & drop files here</p>
+                            </div>
+                            <div id="file-list-container" class="w-full max-h-48 overflow-y-auto"></div>
+                        </div>
+                        <input type="file" id="file-input" class="hidden" multiple>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                             <button id="add-files-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 btn-lift" title="Select files from your computer">Add Files</button>
+                             <button id="generate-file-hash-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 disabled:bg-gray-500/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg btn-lift" disabled title="Generate hashes for all selected files">Generate Hashes</button>
+                        </div>
+                    </div>
+                    <!-- File Verification -->
+                    <div class="space-y-6">
+                        <label class="block text-sm font-semibold text-gray-300">2. Paste Hash to Verify (Single File Only)</label>
+                        <textarea id="hash-to-check" rows="4" class="w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Enter hash here..."></textarea>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="clear-all-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/50 btn-lift" title="Clear all selected files and results">Clear All</button>
+                            <button id="check-hash-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 disabled:bg-gray-500/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/50 btn-lift" disabled title="Verify the first selected file against the hash">Verify Hash</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="text-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <label class="block text-sm font-semibold text-gray-300">Enter Text to Hash</label>
+                    <textarea id="text-to-hash" rows="6" class="w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Type or paste text here..."></textarea>
+                    <button id="generate-text-hash-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg btn-lift">Generate Hash</button>
+                </div>
+            </div>
+
+            <div id="compare-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300">Hash 1</label>
+                        <textarea id="hash-input-1" rows="3" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Paste first hash here..."></textarea>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-semibold text-gray-300">Hash 2</label>
+                        <textarea id="hash-input-2" rows="3" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Paste second hash here..."></textarea>
+                    </div>
+                    <button id="compare-hashes-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/50 btn-lift">Compare Hashes</button>
+                </div>
+            </div>
+            
+            <div id="hmac-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300">Secret Key</label>
+                        <input type="text" id="hmac-key" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-white input-glass" placeholder="Enter secret key...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300">Message</label>
+                        <textarea id="hmac-message" rows="4" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Type or paste message here..."></textarea>
+                    </div>
+                    <button id="generate-hmac-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-indigo-500/50 btn-lift">Generate HMAC</button>
+                </div>
+            </div>
+
+            <div id="base64-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300">Plain Text</label>
+                        <textarea id="base64-plain" rows="5" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm text-white input-glass" placeholder="Type plain text..."></textarea>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-semibold text-gray-300">Base64 Encoded</label>
+                        <textarea id="base64-encoded" rows="5" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Paste Base64 text..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="checksum-tab" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-gray-300">1. Upload Checksum File</label>
+                        <input type="file" id="checksum-file-input" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-gray-200 hover:file:bg-gray-600 cursor-pointer"/>
+                    </div>
+                    <div class="hidden md:flex justify-center items-center">
+                        <svg class="w-12 h-12 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" /></svg>
+                    </div>
+                    <div class="space-y-4 md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-300">2. Select or Drop Local Files to Verify</label>
+                         <div id="checksum-drop-zone" class="drop-zone relative w-full min-h-[8rem] rounded-lg flex flex-col justify-center items-center text-center p-4 bg-gray-800/60 input-glass">
+                            <p class="text-gray-400 text-sm pointer-events-none">Drag & drop local files here</p>
+                        </div>
+                        <input type="file" id="checksum-local-files-input" class="hidden" multiple>
+                        <button id="checksum-add-files-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 btn-lift">Add Local Files</button>
+                    </div>
+                </div>
+                 <div class="mt-6">
+                    <button id="verify-checksum-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-teal-500/50 btn-lift" disabled>Verify Checksum</button>
+                </div>
+            </div>
+            
+            <div id="password-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <label class="block text-sm font-semibold text-gray-300">Password to Check</label>
+                    <input type="text" id="password-input" class="w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-white input-glass" placeholder="Type a password...">
+                    <div>
+                        <div class="w-full bg-gray-700 rounded-full h-2.5">
+                            <div id="password-strength-bar" class="h-2.5 rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                        <p id="password-strength-text" class="text-sm text-center mt-2 font-medium"></p>
+                    </div>
+                    <ul id="password-feedback-list" class="space-y-1 text-sm"></ul>
+                </div>
+            </div>
+            
+            <div id="url-tab" class="tab-content hidden">
+                 <div class="max-w-xl mx-auto space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300">Decoded Text</label>
+                        <textarea id="url-decoded" rows="5" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow text-sm text-white input-glass" placeholder="Type text to encode..."></textarea>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-semibold text-gray-300">Encoded Text</label>
+                        <textarea id="url-encoded" rows="5" class="mt-1 w-full p-3 bg-gray-800/60 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow mono-font text-sm text-white input-glass" placeholder="Paste encoded text..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shared Results Section -->
+            <div id="results-section" class="mt-8 pt-6 border-t border-gray-700 hidden">
+                 <div class="flex justify-between items-center mb-4">
+                    <h2 id="results-title" class="text-xl font-semibold text-white">Results</h2>
+                    <button id="export-btn" class="hidden bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm btn-lift">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export
+                    </button>
+                 </div>
+                 <div id="result-message" class="p-4 rounded-lg text-center font-semibold hidden mb-4"></div>
+                 <div id="hashes-container" class="space-y-4 max-h-96 overflow-y-auto">
+                    <!-- Hash results will be injected here -->
+                 </div>
+            </div>
+
+            <!-- Shared Loading Spinner -->
+            <div id="spinner" class="mt-6 hidden justify-center items-center gap-2 text-gray-300">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <span id="spinner-text">Processing...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Worker Script -->
+    <script id="hash-worker" type="javascript/worker">
+        self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js');
+
+        self.onmessage = (e) => {
+            const { file, algorithm } = e.data;
+            const reader = new FileReader();
+            const chunkSize = 1024 * 1024 * 2; // 2MB chunks
+            let offset = 0;
+            let hashInstance;
+
+            // For Web Crypto API, we need the full buffer. For CryptoJS, we can stream.
+            const isCryptoJS = algorithm === 'MD5'; 
+            if (isCryptoJS) {
+                hashInstance = CryptoJS.algo.MD5.create();
+            }
+            
+            const readChunk = () => {
+                const slice = file.slice(offset, offset + chunkSize);
+                if (slice.size > 0) {
+                    reader.readAsArrayBuffer(slice);
+                } else {
+                    // Finished reading
+                    if(isCryptoJS) {
+                        const hash = hashInstance.finalize().toString();
+                        self.postMessage({ status: 'complete', hash, file: { name: file.name, size: file.size } });
+                    } else {
+                        // For non-streaming APIs, we need to re-read the whole file to hash it.
+                        // The progress was just for the UI. A more advanced implementation
+                        // would accumulate chunks in the worker, but that consumes memory.
+                        const fullReader = new FileReader();
+                        fullReader.onload = async (event) => {
+                             try {
+                                const buffer = event.target.result;
+                                const hashBuffer = await self.crypto.subtle.digest(algorithm, buffer);
+                                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                                const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                                self.postMessage({ status: 'complete', hash, file: { name: file.name, size: file.size } });
+                             } catch(error) {
+                                self.postMessage({ status: 'error', error: error.message, file: { name: file.name } });
+                             }
+                        };
+                        fullReader.readAsArrayBuffer(file);
+                    }
+                }
+            };
+
+            reader.onload = (event) => {
+                offset += event.target.result.byteLength;
+                const progress = Math.round((offset / file.size) * 100);
+                self.postMessage({ status: 'progress', progress, file: { name: file.name } });
+                
+                if (isCryptoJS) {
+                    const wordArray = CryptoJS.lib.WordArray.create(event.target.result);
+                    hashInstance.update(wordArray);
+                }
+                
+                readChunk();
+            };
+
+            reader.onerror = (error) => {
+                self.postMessage({ status: 'error', error: 'File could not be read.', file: { name: file.name } });
+            };
+
+            readChunk();
+        };
+    </script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Worker Setup ---
+        let hashWorker;
+        try {
+            const workerScript = document.getElementById('hash-worker').textContent;
+            const workerBlob = new Blob([workerScript], { type: 'application/javascript' });
+            hashWorker = new Worker(URL.createObjectURL(workerBlob));
+        } catch (e) {
+            console.error("Failed to create web worker. Hashing will happen on the main thread.", e);
+        }
+
+        // --- DOM Element Selection ---
+        const fileInput = document.getElementById('file-input');
+        const addFilesBtn = document.getElementById('add-files-btn');
+        const dropZone = document.getElementById('drop-zone');
+        const dropZoneContent = document.getElementById('drop-zone-content');
+        const fileListContainer = document.getElementById('file-list-container');
+        
+        const algoSelect = document.getElementById('algo-select');
+        const algoSelectContainer = document.getElementById('algo-select-container');
+        const hashToCheckInput = document.getElementById('hash-to-check');
+        const textToHashInput = document.getElementById('text-to-hash');
+        const hashInput1 = document.getElementById('hash-input-1');
+        const hashInput2 = document.getElementById('hash-input-2');
+        const hmacKeyInput = document.getElementById('hmac-key');
+        const hmacMessageInput = document.getElementById('hmac-message');
+        const base64PlainInput = document.getElementById('base64-plain');
+        const base64EncodedInput = document.getElementById('base64-encoded');
+        const checksumFileInput = document.getElementById('checksum-file-input');
+        const checksumDropZone = document.getElementById('checksum-drop-zone');
+        const checksumAddFilesBtn = document.getElementById('checksum-add-files-btn');
+        const checksumLocalFilesInput = document.getElementById('checksum-local-files-input');
+        const passwordInput = document.getElementById('password-input');
+        const passwordStrengthBar = document.getElementById('password-strength-bar');
+        const passwordStrengthText = document.getElementById('password-strength-text');
+        const passwordFeedbackList = document.getElementById('password-feedback-list');
+        const urlDecodedInput = document.getElementById('url-decoded');
+        const urlEncodedInput = document.getElementById('url-encoded');
+
+        const generateFileHashBtn = document.getElementById('generate-file-hash-btn');
+        const generateTextHashBtn = document.getElementById('generate-text-hash-btn');
+        const checkHashBtn = document.getElementById('check-hash-btn');
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const compareHashesBtn = document.getElementById('compare-hashes-btn');
+        const generateHmacBtn = document.getElementById('generate-hmac-btn');
+        const verifyChecksumBtn = document.getElementById('verify-checksum-btn');
+        
+        const exportBtn = document.getElementById('export-btn');
+        
+        const resultsSection = document.getElementById('results-section');
+        const resultsTitle = document.getElementById('results-title');
+        const hashesContainer = document.getElementById('hashes-container');
+        
+        const resultMessageEl = document.getElementById('result-message');
+        const spinner = document.getElementById('spinner');
+        const spinnerText = document.getElementById('spinner-text');
+
+        const tabContainer = document.getElementById('tab-container');
+        const tabSlider = document.getElementById('tab-slider');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const tabDescription = document.getElementById('tab-description');
+
+        let selectedFiles = [];
+        let checksumFile = null;
+        let checksumLocalFiles = [];
+
+        const tabDescriptions = {
+            file: "Calculate cryptographic hashes for local files.",
+            text: "Generate a hash from any text or string input.",
+            compare: "Check if two provided hashes are identical.",
+            hmac: "Generate a keyed-hash for message authentication.",
+            base64: "Encode plain text to Base64 or decode it back.",
+            checksum: "Verify local files against a standard checksum file.",
+            password: "Analyze the strength of a password.",
+            url: "Encode or decode text for safe use in URLs."
+        };
+
+        // --- Persistent State ---
+        const savedTab = localStorage.getItem('activeTab') || 'file';
+        const savedAlgo = localStorage.getItem('selectedAlgo') || 'SHA-256';
+        algoSelect.value = savedAlgo;
+
+
+        // --- Tab Logic ---
+        const updateTabSlider = () => {
+            const activeTabBtn = tabContainer.querySelector('.active');
+            if (activeTabBtn) {
+                tabSlider.style.width = `${activeTabBtn.offsetWidth}px`;
+                tabSlider.style.left = `${activeTabBtn.offsetLeft}px`;
+            }
+        };
+        
+        const switchTab = (tabId) => {
+            resetUi();
+            const tabButtons = tabContainer.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => {
+                const isCurrent = btn.dataset.tab === tabId;
+                btn.classList.toggle('active', isCurrent);
+                btn.classList.toggle('text-gray-300', !isCurrent);
+            });
+
+            tabContents.forEach(content => {
+                const isActive = content.id === `${tabId}-tab`;
+                content.classList.toggle('hidden', !isActive);
+                content.classList.toggle('active-tab', isActive);
+            });
+            
+            algoSelectContainer.style.display = ['file', 'text', 'hmac'].includes(tabId) ? 'block' : 'none';
+            tabDescription.textContent = tabDescriptions[tabId] || '';
+            localStorage.setItem('activeTab', tabId);
+            updateTabSlider();
+        }
+        
+        tabContainer.addEventListener('click', (e) => {
+            if (e.target.matches('.tab-btn')) {
+                switchTab(e.target.dataset.tab);
+            }
+        });
+        
+        // Initial setup for tabs
+        switchTab(savedTab);
+        window.addEventListener('resize', updateTabSlider);
+
+
+        // --- Event Listeners ---
+        addFilesBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        algoSelect.addEventListener('change', () => localStorage.setItem('selectedAlgo', algoSelect.value));
+
+        generateFileHashBtn.addEventListener('click', handleFileHashGeneration);
+        generateTextHashBtn.addEventListener('click', handleTextHashGeneration);
+        checkHashBtn.addEventListener('click', handleHashCheck);
+        clearAllBtn.addEventListener('click', clearAll);
+        compareHashesBtn.addEventListener('click', handleCompareHashes);
+        generateHmacBtn.addEventListener('click', handleHmacGeneration);
+        exportBtn.addEventListener('click', handleExport);
+
+        base64PlainInput.addEventListener('input', () => {
+            try {
+                base64EncodedInput.value = btoa(base64PlainInput.value);
+            } catch (e) {
+                base64EncodedInput.value = 'Invalid input for Base64 encoding.';
+            }
+        });
+        base64EncodedInput.addEventListener('input', () => {
+            try {
+                base64PlainInput.value = atob(base64EncodedInput.value);
+            } catch (e) {
+                base64PlainInput.value = 'Invalid Base64 string.';
+            }
+        });
+        
+        urlDecodedInput.addEventListener('input', () => {
+            urlEncodedInput.value = encodeURIComponent(urlDecodedInput.value);
+        });
+        urlEncodedInput.addEventListener('input', () => {
+            try {
+                urlDecodedInput.value = decodeURIComponent(urlEncodedInput.value);
+            } catch(e) {
+                urlDecodedInput.value = "Invalid encoded string."
+            }
+        });
+
+        passwordInput.addEventListener('input', checkPasswordStrength);
+
+        // Checksum Listeners
+        checksumFileInput.addEventListener('change', (e) => { checksumFile = e.target.files[0]; updateChecksumVerifyButton(); });
+        checksumAddFilesBtn.addEventListener('click', () => checksumLocalFilesInput.click());
+        checksumLocalFilesInput.addEventListener('change', (e) => {
+            checksumLocalFiles.push(...Array.from(e.target.files));
+            // You might want to display these files in the UI
+            updateChecksumVerifyButton();
+        });
+        checksumDropZone.addEventListener('dragover', (e) => { e.preventDefault(); checksumDropZone.classList.add('dragover'); });
+        checksumDropZone.addEventListener('dragleave', () => checksumDropZone.classList.remove('dragover'));
+        checksumDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            checksumDropZone.classList.remove('dragover');
+            checksumLocalFiles.push(...Array.from(e.dataTransfer.files));
+            updateChecksumVerifyButton();
+        });
+        verifyChecksumBtn.addEventListener('click', handleChecksumVerification);
+
+
+        // Drag and Drop Listeners
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                addFiles(e.dataTransfer.files);
+            }
+        });
+        
+        // Event Delegation for Remove Buttons
+        fileListContainer.addEventListener('click', (e) => {
+            const removeButton = e.target.closest('.remove-file-btn');
+            if (removeButton) {
+                e.stopPropagation();
+                const indexToRemove = parseInt(removeButton.dataset.index);
+                const fileItem = removeButton.closest('.file-item');
+                if (fileItem) {
+                    fileItem.classList.add('removing');
+                    setTimeout(() => {
+                        selectedFiles.splice(indexToRemove, 1);
+                        renderFileList();
+                        updateButtonStates();
+                    }, 300);
+                }
+            }
+        });
+        
+        // Prevent page scroll when scrolling over the file list
+        fileListContainer.addEventListener('wheel', (e) => {
+            if (fileListContainer.scrollHeight > fileListContainer.clientHeight) {
+                e.stopPropagation();
+            }
+        });
+
+        // --- Core Logic ---
+        function clearAll() {
+            selectedFiles = [];
+            hashToCheckInput.value = '';
+            renderFileList();
+            updateButtonStates();
+            resetUi();
+        }
+
+        function handleFileSelect(e) {
+            addFiles(e.target.files);
+            fileInput.value = ''; // Reset input to allow re-adding the same file
+        }
+        
+        function addFiles(files) {
+            const newFiles = Array.from(files);
+            const totalFiles = selectedFiles.length + newFiles.length;
+
+            if (totalFiles > 10) {
+                displayMessage('You can only select a maximum of 10 files.', 'error');
+                resultsSection.classList.remove('hidden');
+                const remainingSlots = 10 - selectedFiles.length;
+                if (remainingSlots > 0) {
+                    selectedFiles.push(...newFiles.slice(0, remainingSlots));
+                }
+            } else {
+                selectedFiles.push(...newFiles);
+            }
+            renderFileList();
+            updateButtonStates();
+        }
+        
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function renderFileList() {
+            fileListContainer.innerHTML = '';
+            if (selectedFiles.length > 0) {
+                dropZoneContent.classList.add('hidden');
+            } else {
+                dropZoneContent.classList.remove('hidden');
+            }
+
+            selectedFiles.forEach((file, index) => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'file-item flex items-center justify-between bg-gray-700 p-2 rounded-md mb-2 text-sm';
+                fileElement.dataset.fileName = file.name;
+                fileElement.innerHTML = `
+                    <div class="flex-1 truncate pr-2">
+                        <p class="truncate text-gray-200">${file.name}</p>
+                        <p class="text-xs text-gray-400">${formatBytes(file.size)}</p>
+                        <div class="w-full bg-gray-600 rounded-full h-1.5 mt-1 hidden">
+                            <div class="progress-bar h-1.5 rounded-full"></div>
+                        </div>
+                    </div>
+                    <button data-index="${index}" class="remove-file-btn flex-shrink-0 p-1 rounded-full hover:bg-red-500/20" title="Remove file">
+                        <svg class="w-5 h-5 text-red-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                `;
+                fileListContainer.appendChild(fileElement);
+            });
+        }
+
+        function updateButtonStates() {
+            generateFileHashBtn.disabled = selectedFiles.length === 0;
+            checkHashBtn.disabled = selectedFiles.length !== 1;
+        }
+
+        function resetUi() {
+            resultsSection.classList.add('hidden');
+            resultMessageEl.classList.add('hidden');
+            hashesContainer.innerHTML = '';
+            exportBtn.classList.add('hidden');
+        }
+
+        function handleFileHashGeneration() {
+            if (selectedFiles.length === 0) return;
+            
+            const algorithm = algoSelect.value;
+            showSpinner(true, `Hashing ${selectedFiles.length} file(s)...`);
+            disableButtons(true);
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "Hashing Results";
+
+            let processedCount = 0;
+            hashWorker.onmessage = (e) => {
+                const { status, hash, file, error, progress } = e.data;
+                const fileItem = fileListContainer.querySelector(`.file-item[data-file-name="${file.name}"]`);
+                const progressBar = fileItem?.querySelector('.progress-bar');
+
+                if (status === 'progress' && progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                } else if (status === 'complete') {
+                    if (progressBar) progressBar.style.width = '100%';
+                    displayHashResult(file.name, hash, algorithm);
+                    processedCount++;
+                } else if (status === 'error') {
+                    handleError(error, `hashing ${file.name}`);
+                    processedCount++;
+                }
+                
+                if (processedCount === selectedFiles.length) {
+                    showSpinner(false);
+                    disableButtons(false);
+                    exportBtn.classList.remove('hidden');
+                }
+            };
+
+            selectedFiles.forEach(file => {
+                const fileItem = fileListContainer.querySelector(`.file-item[data-file-name="${file.name}"]`);
+                const progressBarContainer = fileItem?.querySelector('.w-full.bg-gray-600');
+                if (progressBarContainer) progressBarContainer.classList.remove('hidden');
+                hashWorker.postMessage({ file, algorithm });
+            });
+        }
+        
+        async function handleTextHashGeneration() {
+            const text = textToHashInput.value;
+            if (!text) return;
+            const algorithm = algoSelect.value;
+            showSpinner(true, `Hashing text...`);
+            disableButtons(true);
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "Hashing Result";
+            try {
+                const hash = await calculateTextHash(text, algorithm);
+                displayHashResult('Text Input', hash, algorithm);
+            } catch (error) {
+                handleError(error, "generating text hash");
+            } finally {
+                exportBtn.classList.remove('hidden');
+                showSpinner(false);
+                disableButtons(false);
+            }
+        }
+        
+        async function handleHmacGeneration() {
+            const key = hmacKeyInput.value;
+            const message = hmacMessageInput.value;
+            if (!key || !message) {
+                displayMessage("Key and message cannot be empty.", "error");
+                resultsSection.classList.remove('hidden');
+                return;
+            }
+            const algorithm = algoSelect.value;
+            if (algorithm === 'MD5') {
+                displayMessage("HMAC is not supported with MD5 in this tool.", "error");
+                resultsSection.classList.remove('hidden');
+                return;
+            }
+
+            showSpinner(true, 'Generating HMAC...');
+            disableButtons(true);
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "HMAC Result";
+
+            try {
+                const cryptoKey = await self.crypto.subtle.importKey(
+                    "raw",
+                    new TextEncoder().encode(key),
+                    { name: "HMAC", hash: algorithm },
+                    false,
+                    ["sign"]
+                );
+                const signature = await self.crypto.subtle.sign(
+                    "HMAC",
+                    cryptoKey,
+                    new TextEncoder().encode(message)
+                );
+                const hashArray = Array.from(new Uint8Array(signature));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                displayHashResult('HMAC Output', hashHex, algorithm);
+            } catch(e) {
+                handleError(e, "generating HMAC");
+            } finally {
+                showSpinner(false);
+                disableButtons(false);
+            }
+        }
+
+        async function handleHashCheck() {
+            if (selectedFiles.length !== 1) return;
+
+            const file = selectedFiles[0];
+            const hashToCheck = hashToCheckInput.value.trim().toLowerCase();
+            const algorithm = algoSelect.value;
+            if (!hashToCheck) {
+                displayMessage('Please enter a hash to check.', 'error');
+                resultsSection.classList.remove('hidden');
+                return;
+            }
+            showSpinner(true, `Verifying hash...`);
+            disableButtons(true);
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "Verification Result";
+            try {
+                const calculatedHash = await calculateFileHash(file, algorithm);
+                displayHashResult(file.name, calculatedHash, algorithm, 'Calculated');
+                if (calculatedHash === hashToCheck) {
+                    displayMessage('✅ Success! Hashes match.', 'success');
+                } else {
+                    displayMessage('❌ Failure! Hashes do not match.', 'error');
+                }
+            } catch (error) {
+                handleError(error, "checking hash");
+            } finally {
+                showSpinner(false);
+                disableButtons(false);
+            }
+        }
+        
+        function handleCompareHashes() {
+            const hash1 = hashInput1.value.trim().toLowerCase();
+            const hash2 = hashInput2.value.trim().toLowerCase();
+
+            if (!hash1 || !hash2) {
+                displayMessage('Please enter two hashes to compare.', 'error');
+                resultsSection.classList.remove('hidden');
+                return;
+            }
+
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "Comparison Result";
+
+            if (hash1 === hash2) {
+                displayMessage('✅ Success! Hashes match.', 'success');
+            } else {
+                displayMessage('❌ Failure! Hashes do not match.', 'error');
+            }
+        }
+        
+        function handleExport() {
+            const hashElements = hashesContainer.querySelectorAll('.hash-result');
+            if (hashElements.length === 0) return;
+
+            let exportText = `Hash Results\nAlgorithm: ${hashElements[0].dataset.algorithm}\nGenerated on: ${new Date().toUTCString()}\n\n`;
+
+            hashElements.forEach(el => {
+                const name = el.dataset.name;
+                const hash = el.dataset.hash;
+                exportText += `${hash} *${name}\n`;
+            });
+            
+            const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hashes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // --- CHECKSUM LOGIC ---
+        function updateChecksumVerifyButton() {
+            verifyChecksumBtn.disabled = !(checksumFile && checksumLocalFiles.length > 0);
+        }
+        
+        async function handleChecksumVerification() {
+            showSpinner(true, 'Verifying checksums...');
+            disableButtons(true);
+            resetUi();
+            resultsSection.classList.remove('hidden');
+            resultsTitle.textContent = "Checksum Verification Report";
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const checksumEntries = lines.map(line => {
+                    const parts = line.trim().split(/\s+/);
+                    if (parts.length < 2) return null;
+                    const hash = parts[0];
+                    const filename = parts.slice(1).join(' ').replace(/[* ]/g, '');
+                    return { hash, filename };
+                }).filter(Boolean);
+
+                if (checksumEntries.length === 0) {
+                    handleError({ message: 'No valid entries found in checksum file.' }, 'parsing checksum file');
+                    showSpinner(false);
+                    disableButtons(false);
+                    return;
+                }
+                
+                let processedCount = 0;
+                const totalToProcess = checksumLocalFiles.length;
+
+                for (const localFile of checksumLocalFiles) {
+                    const entry = checksumEntries.find(e => e.filename === localFile.name);
+                    if (!entry) {
+                        displayChecksumResult(localFile.name, 'UNEXPECTED', 'File not found in checksum list.');
+                        processedCount++;
+                        continue;
+                    }
+                    
+                    // Simple regex to guess algorithm from hash length
+                    const algo = { 32: 'MD5', 40: 'SHA-1', 64: 'SHA-256', 96: 'SHA-384', 128: 'SHA-512' }[entry.hash.length] || 'Unknown';
+                    
+                    try {
+                        const calculatedHash = await calculateFileHash(localFile, algo);
+                        if (calculatedHash === entry.hash) {
+                            displayChecksumResult(localFile.name, 'PASSED', `Hash: ${calculatedHash}`);
+                        } else {
+                            displayChecksumResult(localFile.name, 'FAILED', `Expected: ${entry.hash}, Got: ${calculatedHash}`);
+                        }
+                    } catch(e) {
+                         displayChecksumResult(localFile.name, 'ERROR', e.message);
+                    }
+                    processedCount++;
+                }
+                
+                // Find missing files
+                checksumEntries.forEach(entry => {
+                    if (!checksumLocalFiles.find(f => f.name === entry.filename)) {
+                        displayChecksumResult(entry.filename, 'MISSING', 'File not provided for verification.');
+                    }
+                });
+
+                showSpinner(false);
+                disableButtons(false);
+            };
+            reader.readAsText(checksumFile);
+        }
+
+        function displayChecksumResult(name, status, details) {
+            const resultElement = document.createElement('div');
+            const statusColors = {
+                PASSED: 'bg-green-500/20 text-green-300',
+                FAILED: 'bg-red-500/20 text-red-300',
+                MISSING: 'bg-yellow-500/20 text-yellow-300',
+                UNEXPECTED: 'bg-purple-500/20 text-purple-300',
+                ERROR: 'bg-gray-500/20 text-gray-300',
+            };
+            resultElement.className = `p-4 rounded-lg ${statusColors[status] || statusColors.ERROR}`;
+            resultElement.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <p class="font-semibold">${name}</p>
+                    <p class="font-bold text-xs px-2 py-1 rounded-full">${status}</p>
+                </div>
+                <p class="text-xs font-mono hash-output">${details}</p>
+            `;
+            hashesContainer.appendChild(resultElement);
+        }
+
+        // Use worker for file hashing if available
+        const calculateFileHash = hashWorker 
+            ? (file, algorithm) => new Promise((resolve, reject) => {
+                const listener = (e) => {
+                    if (e.data.file.name === file.name) {
+                        hashWorker.removeEventListener('message', listener);
+                        if (e.data.status === 'complete') resolve(e.data.hash);
+                        else reject(new Error(e.data.error));
+                    }
+                };
+                hashWorker.addEventListener('message', listener);
+                hashWorker.postMessage({ file, algorithm });
+            })
+            : (file, algorithm) => { /* Fallback to main thread if worker fails */
+                console.warn("Worker not available, hashing on main thread.");
+                // This is a simplified fallback. The original non-worker logic would go here.
+                return Promise.reject(new Error("Web worker failed to initialize."));
+            };
+
+        async function calculateTextHash(text, algorithm) {
+            if (algorithm === 'MD5') {
+                return CryptoJS.MD5(text).toString();
+            }
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await self.crypto.subtle.digest(algorithm, data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // --- PASSWORD STRENGTH ---
+        function checkPasswordStrength() {
+            const password = passwordInput.value;
+            let score = 0;
+            const feedback = [];
+
+            if (password.length >= 8) {
+                score++;
+                feedback.push({ text: "At least 8 characters", valid: true });
+            } else {
+                feedback.push({ text: "At least 8 characters", valid: false });
+            }
+
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) {
+                score++;
+                feedback.push({ text: "Mix of uppercase and lowercase letters", valid: true });
+            } else {
+                feedback.push({ text: "Mix of uppercase and lowercase letters", valid: false });
+            }
+
+            if (/\d/.test(password)) {
+                score++;
+                feedback.push({ text: "Contains numbers", valid: true });
+            } else {
+                feedback.push({ text: "Contains numbers", valid: false });
+            }
+
+            if (/[^a-zA-Z0-9]/.test(password)) {
+                score++;
+                feedback.push({ text: "Contains special characters", valid: true });
+            } else {
+                feedback.push({ text: "Contains special characters", valid: false });
+            }
+            
+            if (password.length >= 12) {
+                score++;
+            }
+
+            const strength = {
+                0: { text: "", color: "bg-gray-400", width: "0%" },
+                1: { text: "Bro? You serious.", color: "bg-red-500", width: "20%" },
+                2: { text: "My grandma can do better, Kartheek.", color: "bg-orange-500", width: "40%" },
+                3: { text: "Getting there, but not quite.", color: "bg-yellow-500", width: "60%" },
+                4: { text: "Nice one! That's a solid password.", color: "bg-blue-500", width: "80%" },
+                5: { text: "Excellent! Fort Knox level security.", color: "bg-green-500", width: "100%" },
+            };
+            
+            const currentStrength = strength[score] || strength[0];
+            if (password.length === 0) {
+                 passwordStrengthBar.style.width = '0%';
+                 passwordStrengthText.textContent = '';
+                 passwordFeedbackList.innerHTML = '';
+                 return;
+            }
+
+            passwordStrengthBar.className = `h-2.5 rounded-full transition-all ${currentStrength.color}`;
+            passwordStrengthBar.style.width = currentStrength.width;
+            passwordStrengthText.textContent = currentStrength.text;
+            
+            passwordFeedbackList.innerHTML = feedback.map(item => `
+                <li class="flex items-center ${item.valid ? 'text-green-500' : 'text-red-500'}">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">${item.valid ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />' : '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />'}</svg>
+                    ${item.text}
+                </li>
+            `).join('');
+        }
+
+        function copyToClipboard(text, button) {
+            if (!text) return;
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const originalIcon = button.innerHTML;
+                button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M20 6 9 17l-5-5"></path></svg>`;
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                }, 2000);
+            } catch (err) { console.error('Fallback: Oops, unable to copy', err); }
+            document.body.removeChild(textArea);
+        }
+
+        // --- UI Helper Functions ---
+        function displayHashResult(name, hash, algorithm) {
+            const resultElement = document.createElement('div');
+            resultElement.className = 'hash-result bg-gray-800/60 p-4 rounded-lg';
+            resultElement.dataset.name = name;
+            resultElement.dataset.hash = hash;
+            resultElement.dataset.algorithm = algorithm;
+            
+            const copyId = `copy-${Math.random().toString(36).substr(2, 9)}`;
+
+            resultElement.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <p class="font-semibold text-gray-200 truncate pr-4">${name}</p>
+                    <p class="text-xs text-gray-400 whitespace-nowrap">${algorithm}</p>
+                </div>
+                <div class="relative">
+                    <p class="hash-output text-sm mono-font text-gray-300 pr-10">${hash}</p>
+                    <button id="${copyId}" class="copy-btn absolute top-0 right-0 p-2 text-gray-400 hover:text-blue-500" title="Copy hash">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+            `;
+            hashesContainer.appendChild(resultElement);
+
+            document.getElementById(copyId).addEventListener('click', (e) => {
+                copyToClipboard(hash, e.currentTarget);
+            });
+        }
+
+        function displayMessage(message, type) {
+            resultMessageEl.innerHTML = message;
+            resultMessageEl.classList.remove('hidden');
+            resultMessageEl.className = 'p-4 rounded-lg text-center font-semibold mb-4'; // Reset classes
+            if (type === 'success') {
+                resultMessageEl.classList.add('bg-green-500/20', 'text-green-300');
+            } else {
+                resultMessageEl.classList.add('bg-red-500/20', 'text-red-300');
+            }
+        }
+        
+        function handleError(error, action) {
+            console.error(`Error ${action}:`, error);
+            displayMessage(`Error ${action}: ${error.message}`, 'error');
+        }
+
+        function showSpinner(show, text = 'Processing...') {
+            spinnerText.textContent = text;
+            spinner.style.display = show ? 'flex' : 'none';
+        }
+
+        function disableButtons(disable) {
+            generateTextHashBtn.disabled = disable;
+            const fileButtonsDisabled = selectedFiles.length === 0;
+            generateFileHashBtn.disabled = disable || fileButtonsDisabled;
+            checkHashBtn.disabled = disable || selectedFiles.length !== 1;
+            generateHmacBtn.disabled = disable;
+            verifyChecksumBtn.disabled = disable || !(checksumFile && checksumLocalFiles.length > 0);
+        }
+    });
+    </script>
+</body>
+</html>
