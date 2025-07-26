@@ -47,40 +47,35 @@
             100% { background-position: 0% 50%; }
         }
         
-        /* Enhanced Glassmorphism */
         .input-glass {
-             background-color: rgba(17, 24, 39, 0.4); /* gray-900/40 */
+             background-color: rgba(17, 24, 39, 0.4);
              backdrop-filter: blur(12px);
              box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
 
-        /* Tab styling */
         .tab-btn {
             transition: color 0.3s ease;
         }
         .tab-btn.active {
-            color: #3b82f6; /* blue-500 */
+            color: #3b82f6;
         }
         #tab-slider {
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
         }
-        /* Custom scrollbar */
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
         .hide-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         
-        /* Progress bar styling */
         .progress-bar {
             width: 0%;
             transition: width 0.2s linear;
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
         }
         
-        /* Button hover effect */
         .btn-lift {
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
         }
@@ -93,7 +88,6 @@
             box-shadow: none;
         }
 
-        /* Tab content fade-in */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -102,7 +96,6 @@
             animation: fadeIn 0.4s ease-out;
         }
 
-        /* File list item animation */
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(-20px); }
             to { opacity: 1; transform: translateX(0); }
@@ -118,7 +111,6 @@
             to { opacity: 0; transform: translateX(20px); }
         }
         
-        /* Icon Animations */
         @keyframes jiggle {
             0%, 100% { transform: rotate(-3deg); }
             50% { transform: rotate(3deg); }
@@ -131,7 +123,6 @@
         }
         .pulse { animation: pulse 0.5s ease-in-out; }
         
-        /* Zebra Striping for results */
         #hashes-container.compact .hash-result:nth-child(even) {
             background-color: rgba(30, 41, 59, 0.4);
         }
